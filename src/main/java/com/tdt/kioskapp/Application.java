@@ -20,7 +20,7 @@ public class Application {
     public static void main(String[] args) {
 
         final ApplicationContext ctx = new AnnotationConfigApplicationContext(AppConfig.class);
-        String vlcHome = "C:/Program Files (x86)/VideoLAN/VLC";
+        String vlcHome = "";
         NativeLibrary.addSearchPath(
                 RuntimeUtil.getLibVlcLibraryName(), vlcHome
         );

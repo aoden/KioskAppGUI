@@ -26,7 +26,7 @@ public class KioskUI extends JFrame {
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         setUndecorated(true);
         setVisible(true);
-        mediaPlayer.playMedia("F:\\workspace\\Upwork Projects\\KioskAppGUI\\data\\1\\Yellow-Wallpaper_Windows_10_HD_2880x1800.png");
+        mediaPlayer.playMedia("");
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
     }
 }
