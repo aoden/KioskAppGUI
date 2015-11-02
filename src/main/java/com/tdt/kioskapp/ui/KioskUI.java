@@ -15,8 +15,14 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Map;
 
+/**
+ * Main UI of program
+ * @author aoden
+ */
 public class KioskUI extends JFrame {
 
     protected MediaPlayerFactory mediaPlayerFactory = new MediaPlayerFactory();
@@ -28,6 +34,8 @@ public class KioskUI extends JFrame {
     protected JLabel initLabel = new JLabel("Please enter a key to unlock: ");
     protected JTextField textField = new JTextField();
     protected JButton startBtn = new JButton("START");
+
+    Logger logger = Logger.getLogger(KioskUI.class);
 
 
     public KioskUI(ApplicationContext context) throws ParseException, ZipException, IOException {
@@ -57,7 +65,6 @@ public class KioskUI extends JFrame {
             }
 
         } catch (Exception ex) {
-            Logger logger = Logger.getLogger(KioskUI.class);
             logger.error(ex.getStackTrace());
         }
     }
@@ -86,9 +93,13 @@ public class KioskUI extends JFrame {
     private void play(String location, int duration) {
         try {
             mediaPlayer.playMedia(location);
-            Thread.sleep(duration);
-        } catch (InterruptedException e1) {
-            e1.printStackTrace();
+            if ("image/jpeg".equals(Files.probeContentType(Paths.get(location)))) {
+
+                Thread.sleep(duration);
+            }
+        } catch (Exception e1) {
+
+            logger.error(e1.getStackTrace());
         }
     }
 }

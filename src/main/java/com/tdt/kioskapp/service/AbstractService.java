@@ -1,6 +1,10 @@
 package com.tdt.kioskapp.service;
 
 
+/**
+ * AbstractService
+ * @author aoden
+ */
 public abstract class AbstractService {
 
     public static final String TEMP_DIR = "temp";
