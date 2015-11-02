@@ -1,7 +1,9 @@
 package com.tdt.kioskapp.ui;
 
+import com.tdt.kioskapp.dto.SlideDTO;
 import com.tdt.kioskapp.service.BaseService;
 import net.lingala.zip4j.exception.ZipException;
+import org.apache.log4j.Logger;
 import org.json.simple.parser.ParseException;
 import org.springframework.context.ApplicationContext;
 import uk.co.caprica.vlcj.player.MediaPlayerFactory;
@@ -13,6 +15,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
+import java.util.Map;
 
 public class KioskUI extends JFrame {
 
@@ -31,9 +34,32 @@ public class KioskUI extends JFrame {
 
         this.context = context;
         initUI();
-        BaseService baseService = context.getBean(BaseService.class);
-        //baseService.readManifest("");
+        final BaseService baseService = context.getBean(BaseService.class);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+
+        startBtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+
+                startSlideShow(baseService);
+                System.exit(0);
+            }
+        });
+    }
+
+    private void startSlideShow(BaseService baseService) {
+        try {
+            Map<String, SlideDTO> manifest = baseService.readManifest(initLabel.getText());
+            for (Map.Entry<String, SlideDTO> entry : manifest.entrySet()) {
+
+                SlideDTO currentMedia = entry.getValue();
+                refresh(currentMedia.getLocation(), currentMedia.getDuration() * 1000);
+            }
+
+        } catch (Exception ex) {
+            Logger logger = Logger.getLogger(KioskUI.class);
+            logger.error(ex.getStackTrace());
+        }
     }
 
     private void initUI() {
@@ -46,23 +72,20 @@ public class KioskUI extends JFrame {
         add(initPanel);
         setUndecorated(true);
         setVisible(true);
-
-        startBtn.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                KioskUI.this.getContentPane().removeAll();
-                KioskUI.this.add(playerCanvas);
-                KioskUI.this.revalidate();
-                KioskUI.this.repaint();
-                mediaPlayer.playMedia("data/2/windows-10-logo.jpg");
-                play(2000);
-                System.exit(0);
-            }
-        });
     }
 
-    private void play(int duration) {
+    private void refresh(String location, int duration) {
+
+        play(BaseService.TEMP_DIR + "/" + location, duration);
+        KioskUI.this.getContentPane().removeAll();
+        KioskUI.this.add(playerCanvas);
+        KioskUI.this.revalidate();
+        KioskUI.this.repaint();
+    }
+
+    private void play(String location, int duration) {
         try {
+            mediaPlayer.playMedia(location);
             Thread.sleep(duration);
         } catch (InterruptedException e1) {
             e1.printStackTrace();
