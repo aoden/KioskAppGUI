@@ -14,6 +14,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -57,45 +58,58 @@ public class KioskUI extends JFrame {
 
     private void startSlideShow(BaseService baseService) {
         try {
-            Map<String, SlideDTO> manifest = baseService.readManifest(initLabel.getText());
+            Map<String, SlideDTO> manifest = baseService.readManifest(textField.getText());
             for (Map.Entry<String, SlideDTO> entry : manifest.entrySet()) {
 
-                SlideDTO currentMedia = entry.getValue();
-                refresh(currentMedia.getLocation(), currentMedia.getDuration() * 1000);
+                SlideDTO currentValue = entry.getValue();
+                File currentFile = baseService.readAllFiles(BaseService.TEMP_DIR + "/" + currentValue.getLocation());
+                if (currentFile != null) {
+
+                    refresh(currentValue.getLocation() + "/" + currentFile.getName(), currentValue.getSeconds() * 1000);
+                }
             }
 
         } catch (Exception ex) {
+            ex.printStackTrace();
             logger.error(ex.getStackTrace());
         }
     }
 
     private void initUI() {
 
+        setLayout(new BorderLayout());
         mediaPlayer.setVideoSurface(videoSurface);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         initPanel.add(initLabel);
         initPanel.add(textField);
         initPanel.add(startBtn);
-        add(initPanel);
+        add(initPanel, BorderLayout.CENTER);
         setUndecorated(true);
         setVisible(true);
     }
 
     private void refresh(String location, int duration) {
 
-        play(BaseService.TEMP_DIR + "/" + location, duration);
+
         KioskUI.this.getContentPane().removeAll();
         KioskUI.this.add(playerCanvas);
         KioskUI.this.revalidate();
         KioskUI.this.repaint();
+        play(BaseService.TEMP_DIR + "/" + location, duration);
     }
 
     private void play(String location, int duration) {
         try {
+            mediaPlayer.attachVideoSurface();
+            mediaPlayer.setFullScreen(true);
+            mediaPlayer.setEnableKeyInputHandling(true);
             mediaPlayer.playMedia(location);
-            if ("image/jpeg".equals(Files.probeContentType(Paths.get(location)))) {
+            if ("image/jpeg".equals(Files.probeContentType(Paths.get(location))) || location == null) {
 
                 Thread.sleep(duration);
+            } else {
+                System.out.println("dkm" + mediaPlayer.getLength());
+                Thread.sleep(mediaPlayer.getLength());
             }
         } catch (Exception e1) {
 

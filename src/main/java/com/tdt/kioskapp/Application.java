@@ -17,7 +17,7 @@ public class Application {
     public static void main(String[] args) {
 
         final ApplicationContext ctx = new AnnotationConfigApplicationContext(AppConfig.class);
-        String vlcHome = "";
+        String vlcHome = System.getenv("VLC_HOME");
         NativeLibrary.addSearchPath(
                 RuntimeUtil.getLibVlcLibraryName(), vlcHome
         );
@@ -31,7 +31,7 @@ public class Application {
                 } catch (Exception e) {
 
                     Logger logger = Logger.getLogger(KioskUI.class);
-                    logger.error(e.getMessage());
+                    logger.error(e.getStackTrace());
                 }
             }
         });
