@@ -37,6 +37,7 @@ public class BaseService extends AbstractService {
                 return file;
             }
         }
+        return null;
     }
 
     public Map<String, SlideDTO> readManifest(String key) throws IOException, ZipException, ParseException {
