@@ -54,8 +54,18 @@ public class KioskUI extends JFrame {
                 KioskUI.this.add(playerCanvas);
                 KioskUI.this.revalidate();
                 KioskUI.this.repaint();
-                mediaPlayer.playMedia("");
+                mediaPlayer.playMedia("data/2/windows-10-logo.jpg");
+                play(2000);
+                System.exit(0);
             }
         });
+    }
+
+    private void play(int duration) {
+        try {
+            Thread.sleep(duration);
+        } catch (InterruptedException e1) {
+            e1.printStackTrace();
+        }
     }
 }
