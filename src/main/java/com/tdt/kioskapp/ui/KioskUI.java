@@ -6,6 +6,7 @@ import net.lingala.zip4j.exception.ZipException;
 import org.apache.log4j.Logger;
 import org.json.simple.parser.ParseException;
 import org.springframework.context.ApplicationContext;
+import uk.co.caprica.vlcj.component.EmbeddedMediaPlayerComponent;
 import uk.co.caprica.vlcj.player.MediaPlayerFactory;
 import uk.co.caprica.vlcj.player.embedded.EmbeddedMediaPlayer;
 import uk.co.caprica.vlcj.player.embedded.videosurface.CanvasVideoSurface;
@@ -14,6 +15,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -22,21 +25,24 @@ import java.util.Map;
 
 /**
  * Main UI of program
+ *
  * @author aoden
  */
 public class KioskUI extends JFrame {
 
+    public static final Dimension TEXT_SIZE = new Dimension(120, 25);
     protected MediaPlayerFactory mediaPlayerFactory = new MediaPlayerFactory();
-    protected EmbeddedMediaPlayer mediaPlayer = mediaPlayerFactory.newEmbeddedMediaPlayer();
+    protected EmbeddedMediaPlayerComponent mediaPlayerComponent = new EmbeddedMediaPlayerComponent();
     protected ApplicationContext context;
-    protected Canvas playerCanvas = new Canvas();
-    protected CanvasVideoSurface videoSurface = mediaPlayerFactory.newVideoSurface(playerCanvas);
     protected JPanel initPanel = new JPanel();
     protected JLabel initLabel = new JLabel("Please enter a key to unlock: ");
-    protected JTextField textField = new JTextField();
+    protected JPasswordField textField = new JPasswordField();
     protected JButton startBtn = new JButton("START");
 
+    protected static volatile boolean play = true;
+
     Logger logger = Logger.getLogger(KioskUI.class);
+    private KeyListener keyListener;
 
 
     public KioskUI(ApplicationContext context) throws ParseException, ZipException, IOException {
@@ -50,8 +56,10 @@ public class KioskUI extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
 
-                startSlideShow(baseService);
-                System.exit(0);
+                while (play) {
+
+                    startSlideShow(baseService);
+                }
             }
         });
     }
@@ -78,7 +86,7 @@ public class KioskUI extends JFrame {
     private void initUI() {
 
         setLayout(new BorderLayout());
-        mediaPlayer.setVideoSurface(videoSurface);
+        textField.setPreferredSize(TEXT_SIZE);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         initPanel.add(initLabel);
         initPanel.add(textField);
@@ -92,24 +100,49 @@ public class KioskUI extends JFrame {
 
 
         KioskUI.this.getContentPane().removeAll();
-        KioskUI.this.add(playerCanvas);
+        KioskUI.this.add(mediaPlayerComponent);
         KioskUI.this.revalidate();
         KioskUI.this.repaint();
+        keyListener = new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+
+                if (e.isControlDown() && e.isAltDown()) {
+
+                    System.exit(0);
+                }
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+
+            }
+        };
+        mediaPlayerComponent.getVideoSurface().addKeyListener(keyListener);
         play(BaseService.TEMP_DIR + "/" + location, duration);
     }
 
     private void play(String location, int duration) {
         try {
+            EmbeddedMediaPlayer mediaPlayer = mediaPlayerComponent.getMediaPlayer();
             mediaPlayer.attachVideoSurface();
             mediaPlayer.setFullScreen(true);
             mediaPlayer.setEnableKeyInputHandling(true);
+            mediaPlayer.setEnableMouseInputHandling(false);
             mediaPlayer.playMedia(location);
             if ("image/jpeg".equals(Files.probeContentType(Paths.get(location))) || location == null) {
 
                 Thread.sleep(duration);
             } else {
-                System.out.println("dkm" + mediaPlayer.getLength());
+
+                mediaPlayer.parseMedia();
                 Thread.sleep(mediaPlayer.getLength());
+
             }
         } catch (Exception e1) {
 
