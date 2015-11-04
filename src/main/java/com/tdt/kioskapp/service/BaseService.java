@@ -4,10 +4,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tdt.kioskapp.dto.KeyDTO;
 import com.tdt.kioskapp.dto.SlideDTO;
+import com.tdt.kioskapp.model.Key;
+import com.tdt.kioskapp.repository.KeyRepository;
 import net.lingala.zip4j.core.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
 import org.apache.commons.io.FileUtils;
-import org.json.simple.parser.ParseException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -19,6 +20,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -26,6 +28,8 @@ public class BaseService extends AbstractService {
 
     @Autowired
     private RestTemplate restTemplate;
+    @Autowired
+    private KeyRepository keyRepository;
     @Value("${url}")
     private String baseURL;
 
@@ -44,6 +48,7 @@ public class BaseService extends AbstractService {
 
     /**
      * read file from a directory, this method only return 1 file
+     *
      * @param location dir location
      * @return the only file inside directory
      */
@@ -64,7 +69,7 @@ public class BaseService extends AbstractService {
         return null;
     }
 
-    public Map<String, SlideDTO> readManifest(String key) throws IOException, ZipException, ParseException {
+    public Map<String, SlideDTO> readManifest(String key) throws IOException, ZipException {
 
         byte[] data = getData(login(register(key)));
         File file = new File("data.zip");
@@ -86,7 +91,7 @@ public class BaseService extends AbstractService {
         headers.add("Accept-Encoding", "gzip, deflate, sdch");
         HttpEntity<Object> httpEntity = new HttpEntity<>(headers);
         return restTemplate.exchange(builder.build().encode().toUri(),
-                HttpMethod.GET,
+                HttpMethod.POST,
                 httpEntity,
                 byte[].class).getBody();
     }
@@ -98,7 +103,7 @@ public class BaseService extends AbstractService {
                 .queryParam("client_id", ID)
                 .queryParam("client_secret", SECRET)
                 .queryParam("key", key);
-        KeyDTO keyDTO = restTemplate.getForObject(builder.build().encode().toUri(), KeyDTO.class);
+        KeyDTO keyDTO = restTemplate.postForEntity(builder.build().encode().toUri(), null, KeyDTO.class).getBody();
         return keyDTO.getKey();
     }
 
@@ -106,7 +111,22 @@ public class BaseService extends AbstractService {
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(baseURL + "/link");
         builder.queryParam("key", key);
-        KeyDTO keyDTO = restTemplate.getForObject(builder.build().encode().toUri(), KeyDTO.class);
+        KeyDTO keyDTO = restTemplate.postForEntity(builder.build().encode().toUri(), null, KeyDTO.class).getBody();
         return keyDTO.getKey();
+    }
+
+    public Map<String, SlideDTO> readManifest() throws IOException {
+        List<Key> keys = keyRepository.findAll();
+        if (keys == null || keys.isEmpty()) {
+            return null;
+        }
+        ObjectMapper objectMapper = new ObjectMapper();
+        return objectMapper.readValue(new File(TEMP_DIR + "/" + MANIFEST_JSON), new TypeReference<Map<String, SlideDTO>>() {
+        });
+    }
+
+    public boolean registered() {
+
+        return keyRepository.findAll() == null || keyRepository.findAll().size() == 0 ? false : true;
     }
 }

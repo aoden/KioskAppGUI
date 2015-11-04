@@ -4,13 +4,9 @@ import com.tdt.kioskapp.dto.SlideDTO;
 import com.tdt.kioskapp.service.BaseService;
 import net.lingala.zip4j.exception.ZipException;
 import org.apache.log4j.Logger;
-import org.json.simple.parser.ParseException;
 import org.springframework.context.ApplicationContext;
 import uk.co.caprica.vlcj.component.EmbeddedMediaPlayerComponent;
-import uk.co.caprica.vlcj.player.MediaPlayerFactory;
 import uk.co.caprica.vlcj.player.embedded.EmbeddedMediaPlayer;
-import uk.co.caprica.vlcj.player.media.Media;
-import uk.co.caprica.vlcj.player.media.callback.nonseekable.FileInputStreamMedia;
 
 import javax.swing.*;
 import java.awt.*;
@@ -30,7 +26,6 @@ public class KioskUI extends JFrame implements Runnable {
 
     public static final Dimension TEXT_SIZE = new Dimension(120, 25);
     protected static volatile boolean play = true;
-    protected MediaPlayerFactory mediaPlayerFactory = new MediaPlayerFactory();
     protected EmbeddedMediaPlayerComponent mediaPlayerComponent = new EmbeddedMediaPlayerComponent();
     protected ApplicationContext context;
     protected JPanel initPanel = new JPanel();
@@ -60,21 +55,27 @@ public class KioskUI extends JFrame implements Runnable {
         }
     };
 
-    public KioskUI(ApplicationContext context) throws ParseException, ZipException, IOException {
+    public KioskUI(ApplicationContext context) throws ZipException, IOException {
 
         this.context = context;
         initUI();
         final BaseService baseService = context.getBean(BaseService.class);
         this.baseService = baseService;
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        if (baseService.registered()) {
 
-        startBtn.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
+            new Thread(KioskUI.this).start();
+        } else {
 
-                new Thread(KioskUI.this).start();
-            }
-        });
+            startBtn.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+
+                    new Thread(KioskUI.this).start();
+                }
+            });
+        }
+
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent event) {
@@ -85,7 +86,9 @@ public class KioskUI extends JFrame implements Runnable {
 
     private void startSlideShow(BaseService baseService) {
         try {
-            Map<String, SlideDTO> manifest = baseService.readManifest(textField.getText());
+            Map<String, SlideDTO> manifest = baseService.registered() ?
+                    baseService.readManifest(textField.getText())
+                    : baseService.readManifest();
             for (Map.Entry<String, SlideDTO> entry : manifest.entrySet()) {
 
                 SlideDTO currentValue = entry.getValue();
@@ -105,15 +108,19 @@ public class KioskUI extends JFrame implements Runnable {
     private void initUI() {
 
         setLayout(new BorderLayout());
-        textField.setPreferredSize(TEXT_SIZE);
-        setExtendedState(JFrame.MAXIMIZED_BOTH);
-        initPanel.add(initLabel);
-        initPanel.add(textField);
-        initPanel.add(startBtn);
-        add(initPanel, BorderLayout.CENTER);
+        if (!baseService.registered()) {
+
+            textField.setPreferredSize(TEXT_SIZE);
+            setExtendedState(JFrame.MAXIMIZED_BOTH);
+            initPanel.add(initLabel);
+            initPanel.add(textField);
+            initPanel.add(startBtn);
+            add(initPanel, BorderLayout.CENTER);
+        }
         setUndecorated(true);
         setVisible(true);
 
+        startBtn.setDefaultCapable(true);
         EmbeddedMediaPlayer mediaPlayer = mediaPlayerComponent.getMediaPlayer();
         mediaPlayer.setEnableKeyInputHandling(true);
         mediaPlayer.setEnableMouseInputHandling(true);
