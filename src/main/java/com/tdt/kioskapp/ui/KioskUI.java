@@ -9,14 +9,12 @@ import org.springframework.context.ApplicationContext;
 import uk.co.caprica.vlcj.component.EmbeddedMediaPlayerComponent;
 import uk.co.caprica.vlcj.player.MediaPlayerFactory;
 import uk.co.caprica.vlcj.player.embedded.EmbeddedMediaPlayer;
-import uk.co.caprica.vlcj.player.embedded.videosurface.CanvasVideoSurface;
+import uk.co.caprica.vlcj.player.media.Media;
+import uk.co.caprica.vlcj.player.media.callback.nonseekable.FileInputStreamMedia;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
+import java.awt.event.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -28,9 +26,10 @@ import java.util.Map;
  *
  * @author aoden
  */
-public class KioskUI extends JFrame {
+public class KioskUI extends JFrame implements Runnable {
 
     public static final Dimension TEXT_SIZE = new Dimension(120, 25);
+    protected static volatile boolean play = true;
     protected MediaPlayerFactory mediaPlayerFactory = new MediaPlayerFactory();
     protected EmbeddedMediaPlayerComponent mediaPlayerComponent = new EmbeddedMediaPlayerComponent();
     protected ApplicationContext context;
@@ -38,28 +37,48 @@ public class KioskUI extends JFrame {
     protected JLabel initLabel = new JLabel("Please enter a key to unlock: ");
     protected JPasswordField textField = new JPasswordField();
     protected JButton startBtn = new JButton("START");
-
-    protected static volatile boolean play = true;
-
     Logger logger = Logger.getLogger(KioskUI.class);
-    private KeyListener keyListener;
+    private BaseService baseService;
+    private KeyAdapter keyListener = new KeyAdapter() {
+        @Override
+        public void keyTyped(KeyEvent e) {
 
+        }
+
+        @Override
+        public void keyPressed(KeyEvent e) {
+
+            System.out.println(e);
+            if (e.isAltDown() && e.isControlDown()) {
+
+                System.exit(0);
+            }
+        }
+
+        @Override
+        public void keyReleased(KeyEvent e) {
+        }
+    };
 
     public KioskUI(ApplicationContext context) throws ParseException, ZipException, IOException {
 
         this.context = context;
         initUI();
         final BaseService baseService = context.getBean(BaseService.class);
+        this.baseService = baseService;
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
         startBtn.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
 
-                while (play) {
-
-                    startSlideShow(baseService);
-                }
+                new Thread(KioskUI.this).start();
+            }
+        });
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent event) {
+                mediaPlayerComponent.release(true);
             }
         });
     }
@@ -78,8 +97,8 @@ public class KioskUI extends JFrame {
             }
 
         } catch (Exception ex) {
-            ex.printStackTrace();
             logger.error(ex.getStackTrace());
+            System.exit(1);
         }
     }
 
@@ -94,59 +113,48 @@ public class KioskUI extends JFrame {
         add(initPanel, BorderLayout.CENTER);
         setUndecorated(true);
         setVisible(true);
+
+        EmbeddedMediaPlayer mediaPlayer = mediaPlayerComponent.getMediaPlayer();
+        mediaPlayer.setEnableKeyInputHandling(true);
+        mediaPlayer.setEnableMouseInputHandling(true);
+        mediaPlayerComponent.getVideoSurface().addKeyListener(keyListener);
     }
 
     private void refresh(String location, int duration) {
 
-
-        KioskUI.this.getContentPane().removeAll();
-        KioskUI.this.add(mediaPlayerComponent);
-        KioskUI.this.revalidate();
-        KioskUI.this.repaint();
-        keyListener = new KeyListener() {
-            @Override
-            public void keyTyped(KeyEvent e) {
-
-                if (e.isControlDown() && e.isAltDown()) {
-
-                    System.exit(0);
-                }
-            }
-
-            @Override
-            public void keyPressed(KeyEvent e) {
-
-            }
-
-            @Override
-            public void keyReleased(KeyEvent e) {
-
-            }
-        };
-        mediaPlayerComponent.getVideoSurface().addKeyListener(keyListener);
         play(BaseService.TEMP_DIR + "/" + location, duration);
     }
 
     private void play(String location, int duration) {
         try {
+
             EmbeddedMediaPlayer mediaPlayer = mediaPlayerComponent.getMediaPlayer();
-            mediaPlayer.attachVideoSurface();
-            mediaPlayer.setFullScreen(true);
-            mediaPlayer.setEnableKeyInputHandling(true);
-            mediaPlayer.setEnableMouseInputHandling(false);
-            mediaPlayer.playMedia(location);
+            mediaPlayer.startMedia(location);
+            mediaPlayer.parseMedia();
+            mediaPlayerComponent.getVideoSurface().requestFocusInWindow();
             if ("image/jpeg".equals(Files.probeContentType(Paths.get(location))) || location == null) {
 
                 Thread.sleep(duration);
             } else {
 
-                mediaPlayer.parseMedia();
                 Thread.sleep(mediaPlayer.getLength());
-
             }
         } catch (Exception e1) {
 
             logger.error(e1.getStackTrace());
+        }
+    }
+
+    @Override
+    public void run() {
+
+        while (play) {
+
+            if (KioskUI.this.getContentPane() != mediaPlayerComponent) {
+                KioskUI.this.setContentPane(mediaPlayerComponent);
+            }
+            KioskUI.this.revalidate();
+            startSlideShow(baseService);
         }
     }
 }
