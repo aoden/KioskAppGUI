@@ -15,6 +15,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -71,7 +72,23 @@ public class BaseService extends AbstractService {
 
     public Map<String, SlideDTO> readManifest(String key) throws IOException, ZipException {
 
-        byte[] data = getData(login(register(key)));
+        return processData(getData(key));
+    }
+
+    public Map<String, SlideDTO> readManifest() throws IOException, ZipException {
+        List<Key> keys = keyRepository.findAll();
+        if (keys == null || keys.isEmpty()) {
+            return null;
+        }
+        return processData(getData(login(keys.get(0).getKey())));
+    }
+
+    public boolean registered() {
+
+        return keyRepository.findAll() == null || keyRepository.findAll().size() == 0 ? false : true;
+    }
+
+    protected Map<String, SlideDTO> processData(byte[] data) throws IOException, ZipException {
         File file = new File("data.zip");
         FileUtils.writeByteArrayToFile(file, data);
         ZipFile zipFile = new ZipFile(file);
@@ -107,26 +124,13 @@ public class BaseService extends AbstractService {
         return keyDTO.getKey();
     }
 
-    protected String register(String key) {
+    @Transactional
+    public String register(String key) {
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(baseURL + "/link");
         builder.queryParam("key", key);
         KeyDTO keyDTO = restTemplate.postForEntity(builder.build().encode().toUri(), null, KeyDTO.class).getBody();
+        keyRepository.save(keyDTO.toEntity());
         return keyDTO.getKey();
-    }
-
-    public Map<String, SlideDTO> readManifest() throws IOException {
-        List<Key> keys = keyRepository.findAll();
-        if (keys == null || keys.isEmpty()) {
-            return null;
-        }
-        ObjectMapper objectMapper = new ObjectMapper();
-        return objectMapper.readValue(new File(TEMP_DIR + "/" + MANIFEST_JSON), new TypeReference<Map<String, SlideDTO>>() {
-        });
-    }
-
-    public boolean registered() {
-
-        return keyRepository.findAll() == null || keyRepository.findAll().size() == 0 ? false : true;
     }
 }
