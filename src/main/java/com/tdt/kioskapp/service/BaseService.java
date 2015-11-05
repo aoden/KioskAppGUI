@@ -2,6 +2,7 @@ package com.tdt.kioskapp.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tdt.kioskapp.dto.AccessTokenDTO;
 import com.tdt.kioskapp.dto.KeyDTO;
 import com.tdt.kioskapp.dto.SlideDTO;
 import com.tdt.kioskapp.model.Key;
@@ -70,9 +71,9 @@ public class BaseService extends AbstractService {
         return null;
     }
 
-    public Map<String, SlideDTO> readManifest(String key) throws IOException, ZipException {
+    public Map<String, SlideDTO> readManifest(String tokenKey) throws IOException, ZipException {
 
-        return processData(getData(key));
+        return processData(getData(login(register(tokenKey))));
     }
 
     public Map<String, SlideDTO> readManifest() throws IOException, ZipException {
@@ -101,14 +102,14 @@ public class BaseService extends AbstractService {
     protected byte[] getData(String key) {
 
         UriComponentsBuilder builder = UriComponentsBuilder
-                .fromHttpUrl(baseURL + "/package")
+                .fromHttpUrl(baseURL + "package")
                 .queryParam("access_token", key);
         HttpHeaders headers = new HttpHeaders();
         headers.add("Accept", "*/*");
         headers.add("Accept-Encoding", "gzip, deflate, sdch");
         HttpEntity<Object> httpEntity = new HttpEntity<>(headers);
         return restTemplate.exchange(builder.build().encode().toUri(),
-                HttpMethod.POST,
+                HttpMethod.GET,
                 httpEntity,
                 byte[].class).getBody();
     }
@@ -116,19 +117,20 @@ public class BaseService extends AbstractService {
     protected String login(String key) {
 
         UriComponentsBuilder builder = UriComponentsBuilder
-                .fromHttpUrl(baseURL + "/oauth")
+                .fromHttpUrl(baseURL + "auth")
                 .queryParam("client_id", ID)
                 .queryParam("client_secret", SECRET)
-                .queryParam("key", key);
-        KeyDTO keyDTO = restTemplate.postForEntity(builder.build().encode().toUri(), null, KeyDTO.class).getBody();
-        return keyDTO.getKey();
+                .queryParam("key", key)
+                .queryParam("grant_type", "key_provider");
+        AccessTokenDTO dto = restTemplate.postForEntity(builder.build().encode().toUri(), null, AccessTokenDTO.class).getBody();
+        return dto.getAccessToken();
     }
 
     @Transactional
     public String register(String key) {
 
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(baseURL + "/link");
-        builder.queryParam("key", key);
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(baseURL + "/activate/");
+        builder.path(key);
         KeyDTO keyDTO = restTemplate.postForEntity(builder.build().encode().toUri(), null, KeyDTO.class).getBody();
         keyRepository.save(keyDTO.toEntity());
         return keyDTO.getKey();

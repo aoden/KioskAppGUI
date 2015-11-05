@@ -27,7 +27,7 @@ public class AppConfig {
         List<HttpMessageConverter<?>> messageConverters = new ArrayList<>();
         messageConverters.add(new MappingJackson2HttpMessageConverter());
         ByteArrayHttpMessageConverter converter = new ByteArrayHttpMessageConverter();
-        converter.setSupportedMediaTypes(Arrays.asList(MediaType.APPLICATION_OCTET_STREAM));
+        converter.setSupportedMediaTypes(Arrays.asList(MediaType.ALL));
         messageConverters.add(converter);
         RestTemplate restTemplate = new RestTemplate();
         restTemplate.setMessageConverters(messageConverters);

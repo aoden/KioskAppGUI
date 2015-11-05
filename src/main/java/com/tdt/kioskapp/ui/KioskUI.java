@@ -34,6 +34,9 @@ public class KioskUI extends JFrame implements Runnable {
     protected JButton startBtn = new JButton("START");
     Logger logger = Logger.getLogger(KioskUI.class);
     private BaseService baseService;
+
+    // this var is meant to prevent the second download
+    static volatile int playCount = 0;
     private KeyAdapter keyListener = new KeyAdapter() {
         @Override
         public void keyTyped(KeyEvent e) {
@@ -86,7 +89,7 @@ public class KioskUI extends JFrame implements Runnable {
 
     private void startSlideShow(BaseService baseService) {
         try {
-            Map<String, SlideDTO> manifest = baseService.registered() ?
+            Map<String, SlideDTO> manifest = !baseService.registered() ?
                     baseService.readManifest(textField.getText())
                     : baseService.readManifest();
             for (Map.Entry<String, SlideDTO> entry : manifest.entrySet()) {
@@ -111,17 +114,18 @@ public class KioskUI extends JFrame implements Runnable {
         if (!baseService.registered()) {
 
             textField.setPreferredSize(TEXT_SIZE);
-            setExtendedState(JFrame.MAXIMIZED_BOTH);
             initPanel.add(initLabel);
             initPanel.add(textField);
             initPanel.add(startBtn);
             add(initPanel, BorderLayout.CENTER);
         }
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
         setUndecorated(true);
         setVisible(true);
 
         startBtn.setDefaultCapable(true);
         EmbeddedMediaPlayer mediaPlayer = mediaPlayerComponent.getMediaPlayer();
+        mediaPlayer.setFullScreen(true);
         mediaPlayer.setEnableKeyInputHandling(true);
         mediaPlayer.setEnableMouseInputHandling(true);
         mediaPlayerComponent.getVideoSurface().addKeyListener(keyListener);
@@ -161,6 +165,7 @@ public class KioskUI extends JFrame implements Runnable {
                 KioskUI.this.setContentPane(mediaPlayerComponent);
             }
             KioskUI.this.revalidate();
+            KioskUI.this.repaint();
             startSlideShow(baseService);
         }
     }
