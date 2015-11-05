@@ -58,9 +58,9 @@ public class KioskUI extends JFrame implements Runnable {
     public KioskUI(ApplicationContext context) throws ZipException, IOException {
 
         this.context = context;
-        initUI();
         final BaseService baseService = context.getBean(BaseService.class);
         this.baseService = baseService;
+        initUI();
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         if (baseService.registered()) {
 
