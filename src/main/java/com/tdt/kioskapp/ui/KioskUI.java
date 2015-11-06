@@ -25,6 +25,8 @@ import java.util.Map;
 public class KioskUI extends JFrame implements Runnable {
 
     public static final Dimension TEXT_SIZE = new Dimension(120, 25);
+    // this var is meant to prevent the second download
+    public static volatile int playCount = 0;
     protected static volatile boolean play = true;
     protected EmbeddedMediaPlayerComponent mediaPlayerComponent = new EmbeddedMediaPlayerComponent();
     protected ApplicationContext context;
@@ -34,9 +36,6 @@ public class KioskUI extends JFrame implements Runnable {
     protected JButton startBtn = new JButton("START");
     Logger logger = Logger.getLogger(KioskUI.class);
     private BaseService baseService;
-
-    // this var is meant to prevent the second download
-    static volatile int playCount = 0;
     private KeyAdapter keyListener = new KeyAdapter() {
         @Override
         public void keyTyped(KeyEvent e) {
@@ -68,6 +67,7 @@ public class KioskUI extends JFrame implements Runnable {
         if (baseService.registered()) {
 
             new Thread(KioskUI.this).start();
+            playCount++;
         } else {
 
             startBtn.addActionListener(new ActionListener() {
@@ -75,6 +75,7 @@ public class KioskUI extends JFrame implements Runnable {
                 public void actionPerformed(ActionEvent e) {
 
                     new Thread(KioskUI.this).start();
+                    playCount++;
                 }
             });
         }
@@ -101,9 +102,11 @@ public class KioskUI extends JFrame implements Runnable {
                     refresh(currentValue.getLocation() + "/" + currentFile.getName(), currentValue.getSeconds() * 1000);
                 }
             }
+            playCount++;
 
         } catch (Exception ex) {
             logger.error(ex.getStackTrace());
+            ex.printStackTrace();
             System.exit(1);
         }
     }

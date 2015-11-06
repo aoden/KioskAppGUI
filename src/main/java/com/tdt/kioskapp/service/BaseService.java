@@ -7,6 +7,7 @@ import com.tdt.kioskapp.dto.KeyDTO;
 import com.tdt.kioskapp.dto.SlideDTO;
 import com.tdt.kioskapp.model.Key;
 import com.tdt.kioskapp.repository.KeyRepository;
+import com.tdt.kioskapp.ui.KioskUI;
 import net.lingala.zip4j.core.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
 import org.apache.commons.io.FileUtils;
@@ -73,7 +74,7 @@ public class BaseService extends AbstractService {
 
     public Map<String, SlideDTO> readManifest(String tokenKey) throws IOException, ZipException {
 
-        return processData(getData(login(register(tokenKey))));
+        return KioskUI.playCount > 1 ? processData() : processData(getData(login(register(tokenKey))));
     }
 
     public Map<String, SlideDTO> readManifest() throws IOException, ZipException {
@@ -81,7 +82,7 @@ public class BaseService extends AbstractService {
         if (keys == null || keys.isEmpty()) {
             return null;
         }
-        return processData(getData(login(keys.get(0).getKey())));
+        return KioskUI.playCount > 1 ? processData() : processData(getData(login(keys.get(0).getKey())));
     }
 
     public boolean registered() {
@@ -94,6 +95,12 @@ public class BaseService extends AbstractService {
         FileUtils.writeByteArrayToFile(file, data);
         ZipFile zipFile = new ZipFile(file);
         zipFile.extractAll(TEMP_DIR);
+        ObjectMapper objectMapper = new ObjectMapper();
+        return objectMapper.readValue(new File(TEMP_DIR + "/" + MANIFEST_JSON), new TypeReference<Map<String, SlideDTO>>() {
+        });
+    }
+
+    protected Map<String, SlideDTO> processData() throws IOException, ZipException {
         ObjectMapper objectMapper = new ObjectMapper();
         return objectMapper.readValue(new File(TEMP_DIR + "/" + MANIFEST_JSON), new TypeReference<Map<String, SlideDTO>>() {
         });
